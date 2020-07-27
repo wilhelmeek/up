@@ -19,7 +19,7 @@ func main() {
 
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", "https://api.up.com.au/api/v1/accounts", nil)
-  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", upTok))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", upTok))
 	if err != nil {
 		log.Fatal("error creating request for accounts")
 	}
