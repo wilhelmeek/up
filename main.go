@@ -1,27 +1,33 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
+	"os"
 
-	ui "github.com/gizak/termui/v3"
-	"github.com/gizak/termui/v3/widgets"
+	"github.com/pkg/errors"
 )
 
+const UP_TOK = "UP_TOK"
+
 func main() {
-	if err := ui.Init(); err != nil {
-		log.Fatalf("failed to initialize termui: %v", err)
+	upTok := os.Getenv(UP_TOK)
+	if upTok == "" {
+		log.Fatalf("%s not set", UP_TOK)
 	}
-	defer ui.Close()
 
-	p := widgets.NewParagraph()
-	p.Text = "Hey there!"
-	p.SetRect(0, 0, 25, 5)
-
-	ui.Render(p)
-
-	for e := range ui.PollEvents() {
-		if e.Type == ui.KeyboardEvent {
-			break
-		}
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://api.up.com.au/api/v1/accounts", nil)
+  req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", upTok))
+	if err != nil {
+		log.Fatal("error creating request for accounts")
 	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "fetching accounts"))
+	}
+
+	fmt.Printf("%+v\n", res)
 }
