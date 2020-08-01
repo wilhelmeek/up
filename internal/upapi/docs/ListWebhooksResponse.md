@@ -1,0 +1,12 @@
+# ListWebhooksResponse
+
+## Properties
+
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**Data** | [**[]WebhookResource**](WebhookResource.md) | The list of webhooks returned in this response.  | 
+**Links** | [**ListAccountsResponseLinks**](ListAccountsResponse_links.md) |  | 
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+

@@ -1,33 +1,29 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
+	"github.com/antihax/optional"
 	"github.com/pkg/errors"
+	"github.com/wilhelmeek/help/internal/upapi"
 )
 
-const UP_TOK = "UP_TOK"
-
 func main() {
-	upTok := os.Getenv(UP_TOK)
-	if upTok == "" {
-		log.Fatalf("%s not set", UP_TOK)
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "https://api.up.com.au/api/v1/accounts", nil)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", upTok))
-	if err != nil {
-		log.Fatal("error creating request for accounts")
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "fetching accounts"))
-	}
-
-	fmt.Printf("%+v\n", res)
+  config := upapi.NewConfiguration()
+  config.AddDefaultHeader(
+    "Authorization",
+    fmt.Sprintf("Bearer %s", os.Getenv("UP_TOK")),
+  )
+  ctx := context.Background()
+  up := upapi.NewAPIClient(config)
+  accs, _, err := up.AccountsApi.AccountsGet(ctx, &upapi.AccountsGetOpts{
+    PageSize: optional.NewInt32(10),
+  })
+  if err != nil {
+    log.Fatal(errors.Wrap(err, "fetching accounts"))
+  }
+  fmt.Printf("%v", accs)
 }

@@ -1,0 +1,2094 @@
+openapi: 3.0.3
+info:
+  contact:
+    name: API Specification and Support
+    url: https://github.com/up-banking/api
+  description: |
+    The Up API gives you programmatic access to your balances and
+    transaction data. You can request past transactions or set up
+    webhooks to receive real-time events when new transactions hit your
+    account. It’s new, it’s exciting and it’s just the beginning.
+  title: Up API
+  version: v1
+servers:
+- url: https://api.up.com.au/api/v1
+security:
+- bearer_auth: []
+tags:
+- description: |
+    Accounts represent the underlying store used to track balances
+    and the transactions that have occurred to modify those balances
+    over time. Up currently has two types of account: `SAVER`—used to
+    earn interest and to hit savings goals, and `TRANSACTIONAL`—used
+    for everyday spending.
+  name: Accounts
+- description: |
+    Transactions represent the movement of money into and out of an
+    account. They have many characteristics that vary depending on
+    the kind of transaction. Transactions may be tempoarily `HELD`
+    (pending) or `SETTLED`, typically depending on which payment
+    method was used at the point of sale.
+  name: Transactions
+- description: |
+    Webhooks provide a mechanism for a configured URL to receive
+    events when transaction activity occurs on Up. You can think of
+    webhooks as being like push notifications for your server-side
+    application.
+  name: Webhooks
+- description: |
+    Some endpoints exist not to expose data, but to test the API
+    itself. Currently there is only one endpoint in this group: ping!
+  name: Utility endpoints
+paths:
+  /accounts:
+    get:
+      description: |
+        Retrieve a paginated list of all accounts for the currently
+        authenticated user. The returned list is paginated and can be scrolled
+        by following the `prev` and `next` links where present.
+      parameters:
+      - description: |
+          The number of records to return in each page.
+        example: 30
+        explode: true
+        in: query
+        name: page[size]
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListAccountsResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:GJNRmauPTr4tzEea
+              pathParameters: {}
+              queryParameters:
+                page[size]: 1
+            response:
+              data:
+              - id: 27f71ec3-3208-4a1e-a95a-6a8fcd5ad1a5
+                type: accounts
+                attributes:
+                  displayName: Up Account
+                  accountType: TRANSACTIONAL
+                  balance:
+                    currencyCode: AUD
+                    value: "1.00"
+                    valueInBaseUnits: 100
+                  createdAt: 2020-07-30T11:21:18+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/accounts/27f71ec3-3208-4a1e-a95a-6a8fcd5ad1a5
+                relationships:
+                  transactions:
+                    links:
+                      related: https://api.up.com.au/api/v1/accounts/27f71ec3-3208-4a1e-a95a-6a8fcd5ad1a5/transactions
+              links:
+                next: https://api.up.com.au/api/v1/accounts?page%5Bafter%5D=WyIyMDIwLTA3LTMwVDAxOjIxOjE4LjkwMjg1OTAwMFoiLCIyN2Y3MWVjMy0zMjA4LTRhMWUtYTk1YS02YThmY2Q1YWQxYTUiXQ%3D%3D&page%5Bsize%5D=1
+      summary: List accounts
+      tags:
+      - Accounts
+  /accounts/{id}:
+    get:
+      description: |
+        Retrieve a specific account by providing its unique identifier.
+      parameters:
+      - description: |
+          The unique identifier for the account.
+        example: 78cfa184-e004-4764-a0c5-5ca4c13b0d16
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAccountResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:UDM6OVhp3sMRCqQ5
+              pathParameters:
+                id: 92ae51a4-563c-4d58-91b3-333afbe205cd
+              queryParameters: {}
+            response:
+              data:
+                id: 92ae51a4-563c-4d58-91b3-333afbe205cd
+                type: accounts
+                attributes:
+                  displayName: Savings
+                  accountType: SAVER
+                  balance:
+                    currencyCode: AUD
+                    value: "125.36"
+                    valueInBaseUnits: 12536
+                  createdAt: 2020-07-30T11:21:20+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/accounts/92ae51a4-563c-4d58-91b3-333afbe205cd
+                relationships:
+                  transactions:
+                    links:
+                      related: https://api.up.com.au/api/v1/accounts/92ae51a4-563c-4d58-91b3-333afbe205cd/transactions
+      summary: Retrieve account
+      tags:
+      - Accounts
+  /util/ping:
+    get:
+      description: |
+        Make a basic ping request to the API. This is useful to verify that
+        authentication is functioning correctly. On authentication success an
+        HTTP `200` status is returned. On failure an HTTP `401` error response
+        is returned.
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:yCwEg7cyxsz3pnVB
+              pathParameters: {}
+              queryParameters: {}
+            response:
+              meta:
+                id: ba853d99-3fa9-4d81-aea3-f129e4f3010d
+                statusEmoji: ⚡️
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Not Authorized
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers: {}
+              pathParameters: {}
+              queryParameters: {}
+            response:
+              errors:
+              - status: "401"
+                title: Not Authorized
+                detail: The request was not authenticated because no valid credential
+                  was found in the Authorization header, or the Authorization header
+                  was not present.
+      summary: Ping
+      tags:
+      - Utility endpoints
+  /transactions:
+    get:
+      description: |
+        Retrieve a list of all transactions across all accounts for the currently
+        authenticated user. The returned list is [paginated](#pagination) and can
+        be scrolled by following the `next` and `prev` links where present. To
+        narrow the results to a specific date range pass one or both of
+        `filter[since]` and `filter[until]` in the query string. These filter
+        parameters **should not** be used for pagination. Results are ordered
+        newest first to oldest last.
+      parameters:
+      - description: |
+          The number of records to return in each page.
+        example: 30
+        explode: true
+        in: query
+        name: page[size]
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: |
+          The start date-time from which to return records,
+          formatted according to rfc-3339. Not to be used for
+          pagination purposes.
+        example: 2020-01-01T01:02:03+10:00
+        explode: true
+        in: query
+        name: filter[since]
+        required: false
+        schema:
+          format: date-time
+          type: string
+        style: form
+      - description: |
+          The end date-time up to which to return records,
+          formatted according to rfc-3339. Not to be used for
+          pagination purposes.
+        example: 2020-02-01T01:02:03+10:00
+        explode: true
+        in: query
+        name: filter[until]
+        required: false
+        schema:
+          format: date-time
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTransactionsResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:zsHPn8FnFHG8PfkL
+              pathParameters: {}
+              queryParameters:
+                page[size]: 1
+            response:
+              data:
+              - id: dde37274-6c6a-4af7-abdd-c17d9cd0fc21
+                type: transactions
+                attributes:
+                  status: SETTLED
+                  description: David Taylor
+                  message: Money for the pizzas last night.
+                  amount:
+                    currencyCode: AUD
+                    value: -59.98
+                    valueInBaseUnits: -5998
+                  settledAt: 2020-07-29T04:19:27+10:00
+                  createdAt: 2020-07-29T04:19:27+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/transactions/dde37274-6c6a-4af7-abdd-c17d9cd0fc21
+                relationships:
+                  account:
+                    links:
+                      related: https://api.up.com.au/api/v1/accounts/e09a6d79-4991-462d-abe3-dc4f54bf336b
+                    data:
+                      type: accounts
+                      id: e09a6d79-4991-462d-abe3-dc4f54bf336b
+              links:
+                next: https://api.up.com.au/api/v1/transactions?page%5Bafter%5D=WyIyMDIwLTA3LTI4VDE4OjE5OjI3Ljg1ODY0MDAwMFoiLCJkZGUzNzI3NC02YzZhLTRhZjctYWJkZC1jMTdkOWNkMGZjMjEiXQ%3D%3D&page%5Bsize%5D=1
+      summary: List transactions
+      tags:
+      - Transactions
+  /transactions/{id}:
+    get:
+      description: |
+        Retrieve a specific transaction by providing its unique identifier.
+      parameters:
+      - description: |
+          The unique identifier for the transaction.
+        example: 11af1331-4cf3-44f3-bff7-7f6a024b42e9
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTransactionResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:H5ChEhlsGmRlkA52
+              pathParameters:
+                id: de572c65-5545-4c7e-9e94-d437e41279c3
+              queryParameters: {}
+            response:
+              data:
+                id: de572c65-5545-4c7e-9e94-d437e41279c3
+                type: transactions
+                attributes:
+                  status: SETTLED
+                  rawText: WARUNG BEBEK, UBUD INDONES
+                  description: Warung Bebek Bengil
+                  holdInfo:
+                    amount:
+                      currencyCode: AUD
+                      value: -107.92
+                      valueInBaseUnits: -10792
+                    foreignAmount:
+                      currencyCode: IDR
+                      value: -1053698.77
+                      valueInBaseUnits: -105369877
+                  roundUp:
+                    amount:
+                      currencyCode: AUD
+                      value: -0.08
+                      valueInBaseUnits: -8
+                  amount:
+                    currencyCode: AUD
+                    value: -107.92
+                    valueInBaseUnits: -10792
+                  foreignAmount:
+                    currencyCode: IDR
+                    value: -1053698.77
+                    valueInBaseUnits: -105369877
+                  settledAt: 2020-07-25T09:18:30+10:00
+                  createdAt: 2020-07-27T04:00:00+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/transactions/de572c65-5545-4c7e-9e94-d437e41279c3
+                relationships:
+                  account:
+                    links:
+                      related: https://api.up.com.au/api/v1/accounts/57f8c861-939c-4a1b-aa06-beeeab9ee7e6
+                    data:
+                      type: accounts
+                      id: 57f8c861-939c-4a1b-aa06-beeeab9ee7e6
+      summary: Retrieve transaction
+      tags:
+      - Transactions
+  /accounts/{accountId}/transactions:
+    get:
+      description: |
+        Retrieve a list of all transactions for a specific account. The returned
+        list is [paginated](#pagination) and can be scrolled by following the
+        `next` and `prev` links where present. To narrow the results to a
+        specific date range pass one or both of `filter[since]` and
+        `filter[until]` in the query string. These filter parameters
+        **should not** be used for pagination. Results are ordered newest first
+        to oldest last.
+      parameters:
+      - description: |
+          The unique identifier for the account.
+        example: 0fbe93da-b34b-440b-9741-2821c2a3b4be
+        explode: false
+        in: path
+        name: accountId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |
+          The number of records to return in each page.
+        example: 30
+        explode: true
+        in: query
+        name: page[size]
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: |
+          The start date-time from which to return records,
+          formatted according to rfc-3339. Not to be used for
+          pagination purposes.
+        example: 2020-01-01T01:02:03+10:00
+        explode: true
+        in: query
+        name: filter[since]
+        required: false
+        schema:
+          format: date-time
+          type: string
+        style: form
+      - description: |
+          The end date-time up to which to return records,
+          formatted according to rfc-3339. Not to be used for
+          pagination purposes.
+        example: 2020-02-01T01:02:03+10:00
+        explode: true
+        in: query
+        name: filter[until]
+        required: false
+        schema:
+          format: date-time
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTransactionsResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:X4jcQmGU561jEtW2
+              pathParameters:
+                accountId: d10e110a-77de-4f28-a6a4-2c6ebf4885a5
+              queryParameters:
+                page[size]: 1
+            response:
+              data:
+              - id: 210e121e-f06d-4824-949f-3f5751aaefff
+                type: transactions
+                attributes:
+                  status: SETTLED
+                  description: David Taylor
+                  message: Money for the pizzas last night.
+                  amount:
+                    currencyCode: AUD
+                    value: -59.98
+                    valueInBaseUnits: -5998
+                  settledAt: 2020-07-29T04:19:35+10:00
+                  createdAt: 2020-07-29T04:19:35+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/transactions/210e121e-f06d-4824-949f-3f5751aaefff
+                relationships:
+                  account:
+                    links:
+                      related: https://api.up.com.au/api/v1/accounts/d10e110a-77de-4f28-a6a4-2c6ebf4885a5
+                    data:
+                      type: accounts
+                      id: d10e110a-77de-4f28-a6a4-2c6ebf4885a5
+              links:
+                next: https://api.up.com.au/api/v1/accounts/d10e110a-77de-4f28-a6a4-2c6ebf4885a5/transactions?page%5Bafter%5D=WyIyMDIwLTA3LTI4VDE4OjE5OjM1LjEwMjUxOTAwMFoiLCIyMTBlMTIxZS1mMDZkLTQ4MjQtOTQ5Zi0zZjU3NTFhYWVmZmYiXQ%3D%3D&page%5Bsize%5D=1
+      summary: List transactions by account
+      tags:
+      - Transactions
+  /webhooks:
+    get:
+      description: |
+        Retrieve a list of configured webhooks. The returned list is
+        [paginated](#pagination) and can be scrolled by following the `next`
+        and `prev` links where present. Results are ordered oldest first to
+        newest last.
+      parameters:
+      - description: |
+          The number of records to return in each page.
+        example: 30
+        explode: true
+        in: query
+        name: page[size]
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWebhooksResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:SMOjcE6hM503xwfS
+              pathParameters: {}
+              queryParameters:
+                page[size]: 1
+            response:
+              data:
+              - id: 46899654-0e6e-43d4-856f-d37ccb0693af
+                type: webhooks
+                attributes:
+                  url: http://example.com/webhook-1
+                  description: Webhook number 1
+                  createdAt: 2020-07-28T11:21:36+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/webhooks/46899654-0e6e-43d4-856f-d37ccb0693af
+                relationships:
+                  logs:
+                    links:
+                      related: https://api.up.com.au/api/v1/webhooks/46899654-0e6e-43d4-856f-d37ccb0693af/logs
+              links:
+                next: https://api.up.com.au/api/v1/webhooks?page%5Bafter%5D=WyIyMDIwLTA3LTI4VDAxOjIxOjM2LjkyMTc3NTAwMFoiLCI0Njg5OTY1NC0wZTZlLTQzZDQtODU2Zi1kMzdjY2IwNjkzYWYiXQ%3D%3D&page%5Bsize%5D=1
+      summary: List webhooks
+      tags:
+      - Webhooks
+    post:
+      callbacks:
+        Event:
+          '{webhookURL}':
+            post:
+              description: |
+                Once you have created a webhook in the Up API, events are sent to the
+                webhook’s configured URL as JSON-encoded `POST` requests. The webhook
+                URL must respond with a HTTP `200` status on success.
+
+                It is important that the URL responds in a timely manner. If the URL
+                takes too long to respond (currently 30s), the request will be timed
+                out. For this reason it is strongly advised to avoid any heavy
+                processing before a response has been returned from the URL. A common
+                solution to this problem is to use a message broker such as RabbitMQ
+                to do the work asynchronously.
+
+                Event delivery is retried with exponential backoff in the case of any
+                non `200` response status, if the URL is unreachable, or if the request
+                is timed out.
+
+                Refer to the `eventType` attribute in order to determine what course of
+                action to take when handling the event. The following event types are
+                currently sent:
+
+                **`PING`**
+
+                Manually triggered by calls to the webhook `ping` endpoint. Used for
+                testing and debugging purposes.
+
+                **`TRANSACTION_CREATED`**
+
+                Triggered whenever a new transaction is created in Up. This event
+                includes a `transaction` relationship that provides the unique
+                identifier for the transaction and a link to the transaction within the
+                Up API. This link should be used to retrieve the complete transaction
+                data.
+
+                **`TRANSACTION_SETTLED`**
+
+                Triggered whenever a transaction transitions from the `HELD` status to
+                the `SETTLED` status. This event includes a `transaction` relationship
+                that provides the unique identifier for the transaction and a link to
+                the transaction within the Up API. This link should be used to retrieve
+                the complete transaction data.
+
+                Due to external factors in banking processes, on rare occasions this
+                event may not be triggered. Separate `TRANSACTION_DELETED` and
+                `TRANSACTION_CREATED` events will be received in its place.
+
+                **`TRANSACTION_DELETED`**
+
+                Triggered whenever a `HELD` transaction is deleted from Up. This
+                generally occurs for example when a hotel deposit is returned. This
+                event includes a `transaction` relationship that provides the unique
+                identifier for the transaction, however no link is provided to the
+                transaction within the Up API as it no longer exists.
+
+                ## Securing Webhook Event Handlers
+
+                Incoming webhook event requests include a `X-Up-Authenticity-Signature`
+                header, which can be used to verify that the event was sent by Up.
+                Verification of the signature requires knowledge of the shared
+                `secretKey` that was returned upon creation of the webhook. This key is
+                known only to your application and to Up.
+
+                The verification process involves:
+
+                1. Taking the raw, unparsed webhook event request body.
+                2. Computing the SHA-256 HMAC signature of the request body, using the
+                   shared `secretKey`.
+                3. Comparing the computed HMAC signature with the value of the
+                   `X-Up-Authenticity-Signature` header.
+
+                If the computed SHA-256 HMAC signature matches the
+                `X-Up-Authenticity-Signature` header, the request is valid.
+
+                A few language-specific examples follow.
+
+                **Ruby**:
+
+                This example uses the Ruby on Rails framework.
+
+                ```ruby
+                require 'openssl'
+
+                def handle_webhook_event
+                  received_signature =
+                    request.headers['X-Up-Authenticity-Signature']
+
+                  signature = OpenSSL::HMAC.hexdigest(
+                    'SHA256',
+                    secret_key,
+                    request.raw_post,
+                  )
+
+                  if Rack::Utils.secure_compare(received_signature, signature)
+                    # Process webhook event
+                  end
+                end
+                ```
+
+                **PHP**:
+
+                This example uses the Laravel framework.
+
+                ```php
+                public function handleWebhookEvent(Request $request) {
+                    $received_signature = $request->header(
+                        'X-Up-Authenticity-Signature',
+                    );
+                    $raw_body = file_get_contents('php://input');
+                    $signature = hash_hmac('sha256', $raw_body, $secret_key);
+
+                    if (hash_equals($signature, $received_signature)) {
+                        // Process webhook event
+                    }
+                }
+                ```
+
+                **Go**:
+
+                This example is in plain Go.
+
+                ```go
+                import (
+                    "crypto/hmac"
+                    "crypto/sha256"
+                    "encoding/hex"
+                    "io"
+                    "net/http"
+                )
+
+                func handleWebhookEvent(w http.ResponseWriter, r *http.Request) {
+                    received_signature, _ := hex.DecodeString(
+                        r.Header.Get("X-Up-Authenticity-Signature"),
+                    )
+
+                    mac := hmac.New(sha256.New, secret_key)
+                    io.Copy(mac, r.Body)
+                    signature := mac.Sum(nil)
+
+                    if hmac.Equal(signature, received_signature)
+                        // Process webhook event
+                    }
+                }
+                ```
+
+                If the `secretKey` for a webhook is lost, simply create a new webhook
+                with the same URL, capture the returned `secretKey` and delete the
+                original webhook.
+              operationId: event_webhookURLPost
+              parameters:
+              - description: |
+                  The SHA-256 HMAC signature of the raw request body, signed using
+                  the `secretKey` of the webhook.
+                example: 317c0a8ea81df3f53c1d2aef5dcbf60492d0df557197b2990e71daa4a0693364
+                explode: false
+                in: header
+                name: X-Up-Authenticity-Signature
+                required: false
+                schema:
+                  type: string
+                style: simple
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/WebhookEventCallback'
+              responses:
+                "200":
+                  description: Successful Response
+              summary: Handling webhook events
+              x-up:example:
+                type: examplePayload
+                payload:
+                  data:
+                    id: d8598773-2d67-4ebd-a40c-ed1316e05465
+                    type: webhook-events
+                    attributes:
+                      eventType: TRANSACTION_CREATED
+                      createdAt: 2020-07-30T11:21:38+10:00
+                    relationships:
+                      webhook:
+                        links:
+                          related: https://api.up.com.au/api/v1/webhooks/df4a1f49-3f29-4a4a-bf73-6abdad144239
+                        data:
+                          type: webhooks
+                          id: df4a1f49-3f29-4a4a-bf73-6abdad144239
+                      transaction:
+                        links:
+                          related: https://api.up.com.au/api/v1/transactions/6182e44f-748f-4fb6-81c8-7e1f2ec8e8e3
+                        data:
+                          type: transactions
+                          id: 6182e44f-748f-4fb6-81c8-7e1f2ec8e8e3
+              x-callback-request: true
+      description: |
+        Create a new webhook with a given URL. The URL will receive webhook
+        events as JSON-encoded `POST` requests. The URL must respond with a HTTP
+        `200` status on success.
+
+        There is currently a limit of 10 webhooks at any given time. Once this
+        limit is reached, existing webhooks will need to be deleted before new
+        webhooks can be created.
+
+        Event delivery is retried with exponential backoff if the URL is
+        unreachable or it does not respond with a `200` status. The response
+        includes a `secretKey` attribute, which is used to sign requests sent to
+        the webhook URL. It will not be returned from any other endpoints within
+        the Up API. If the `secretKey` is lost, simply create a new webhook with
+        the same URL, capture its `secretKey` and then delete the original
+        webhook. See [Handling webhook events](#callback_post_webhookURL) for
+        details on how to process webhook events.
+
+        It is probably a good idea to test the webhook by
+        [sending it a `PING` event](#post_webhooks_webhookId_ping) after creating
+        it.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWebhookResponse'
+          description: Created
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:sXGeoNsxxEkHAiGF
+                Content-Type: application/json
+              pathParameters: {}
+              queryParameters: {}
+              payload:
+                data:
+                  attributes:
+                    url: http://example.com/webhook
+                    description: Example webhook
+            response:
+              data:
+                id: 8133138b-acb5-46f0-b609-483fcd88bd77
+                type: webhooks
+                attributes:
+                  url: http://example.com/webhook
+                  description: Example webhook
+                  secretKey: 8zLIXLQaqMtdxiHi1sA64d3t3K9lluVVl3HjIGeukRVBJTuECg6lbErK9j4DolBR
+                  createdAt: 2020-07-30T11:21:37+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/webhooks/8133138b-acb5-46f0-b609-483fcd88bd77
+                relationships:
+                  logs:
+                    links:
+                      related: https://api.up.com.au/api/v1/webhooks/8133138b-acb5-46f0-b609-483fcd88bd77/logs
+      summary: Create webhook
+      tags:
+      - Webhooks
+  /webhooks/{id}:
+    delete:
+      description: |
+        Delete a specific webhook by providing its unique identifier. Once
+        deleted, webhook events will no longer be sent to the configured URL.
+      parameters:
+      - description: |
+          The unique identifier for the webhook.
+        example: cc4d6c6f-8788-4493-a626-424fab0e72c4
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Deleted
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:x0k5B9CuVfaouQ56
+              pathParameters:
+                id: 304a8057-4864-41f6-9141-0086f709b0c0
+              queryParameters: {}
+      summary: Delete webhook
+      tags:
+      - Webhooks
+    get:
+      description: |
+        Retrieve a specific webhook by providing its unique identifier.
+      parameters:
+      - description: |
+          The unique identifier for the webhook.
+        example: ecff13f7-5aa6-4498-9961-ff86573b0ed9
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWebhookResponse'
+          description: Successful Response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:x2u8lZRbcbBxUc0n
+              pathParameters:
+                id: e93566de-2e39-4a20-a35a-b9b53514fc0c
+              queryParameters: {}
+            response:
+              data:
+                id: e93566de-2e39-4a20-a35a-b9b53514fc0c
+                type: webhooks
+                attributes:
+                  url: http://example.com/webhook-2
+                  description: Webhook number 2
+                  createdAt: 2020-07-29T11:21:39+10:00
+                links:
+                  self: https://api.up.com.au/api/v1/webhooks/e93566de-2e39-4a20-a35a-b9b53514fc0c
+                relationships:
+                  logs:
+                    links:
+                      related: https://api.up.com.au/api/v1/webhooks/e93566de-2e39-4a20-a35a-b9b53514fc0c/logs
+      summary: Retrieve webhook
+      tags:
+      - Webhooks
+  /webhooks/{webhookId}/ping:
+    post:
+      description: |
+        Send a `PING` event to a webhook by providing its unique identifier.
+        This is useful for testing and debugging purposes. The event is delivered
+        asynchronously and its data is returned in the response to this request.
+      parameters:
+      - description: |
+          The unique identifier for the webhook.
+        example: e5c11d75-a5f4-460d-b31f-e75f8ea288c9
+        explode: false
+        in: path
+        name: webhookId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookEventCallback'
+          description: Successful response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:3Jn4fh3pMc7nsixI
+              pathParameters:
+                webhookId: a4f0caaf-4852-4eeb-afc6-1b2c7caad3d3
+              queryParameters: {}
+            response:
+              data:
+                id: c5a8dd73-b46a-409b-bcfd-21d5aebea306
+                type: webhook-events
+                attributes:
+                  eventType: PING
+                  createdAt: 2020-07-30T11:21:42+10:00
+                relationships:
+                  webhook:
+                    links:
+                      related: https://api.up.com.au/api/v1/webhooks/a4f0caaf-4852-4eeb-afc6-1b2c7caad3d3
+                    data:
+                      type: webhooks
+                      id: a4f0caaf-4852-4eeb-afc6-1b2c7caad3d3
+      summary: Ping webhook
+      tags:
+      - Webhooks
+  /webhooks/{webhookId}/logs:
+    get:
+      description: |
+        Retrieve a list of delivery logs for a webhook by providing its unique
+        identifier. This is useful for analysis and debugging purposes. The
+        returned list is [paginated](#pagination) and can be scrolled by
+        following the `next` and `prev` links where present. Results are ordered
+        newest first to oldest last. Logs may be automatically purged after a
+        period of time.
+      parameters:
+      - description: |
+          The unique identifier for the webhook.
+        example: 70d1c429-10a4-43bb-b062-0c2899379d2d
+        explode: false
+        in: path
+        name: webhookId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: |
+          The number of records to return in each page.
+        example: 30
+        explode: true
+        in: query
+        name: page[size]
+        required: false
+        schema:
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWebhookDeliveryLogsResponse'
+          description: Successful response
+          x-up:example:
+            type: exampleRequestResponse
+            request:
+              headers:
+                Authorization: Bearer up:demo:LixiMyJ2owQz4Nkx
+              pathParameters:
+                webhookId: daf68ee5-d391-4449-973c-2233309f5aa1
+              queryParameters:
+                page[size]: 1
+            response:
+              data:
+              - id: 9abf6e24-097a-43a0-83d6-9de1caa24cd8
+                type: webhook-delivery-logs
+                attributes:
+                  request:
+                    body: '{"data":{"id":"a67d7317-39b8-423a-b365-552f85892ed3","type":"webhook-events","attributes":{"eventType":"TRANSACTION_CREATED","createdAt":"2020-07-29T11:22:44+10:00"},"relationships":{"webhook":{"links":{"related":"https://api.up.com.au/api/v1/webhooks/daf68ee5-d391-4449-973c-2233309f5aa1"},"data":{"type":"webhooks","id":"daf68ee5-d391-4449-973c-2233309f5aa1"}},"transaction":{"links":{"related":"https://api.up.com.au/api/v1/transactions/fe1e86d5-ea81-457c-82d7-058008bbf3ea"},"data":{"type":"transactions","id":"fe1e86d5-ea81-457c-82d7-058008bbf3ea"}}}}}'
+                  response:
+                    statusCode: 200
+                    body: '{"ok":true}'
+                  deliveryStatus: DELIVERED
+                  createdAt: 2020-07-29T11:22:44+10:00
+                relationships:
+                  webhookEvent:
+                    data:
+                      type: webhook-events
+                      id: a67d7317-39b8-423a-b365-552f85892ed3
+              links:
+                next: https://api.up.com.au/api/v1/webhooks/daf68ee5-d391-4449-973c-2233309f5aa1/logs?page%5Bafter%5D=WyIyMDIwLTA3LTI5VDAxOjIyOjQ0LjM0MTgxNjAwMFoiLCI5YWJmNmUyNC0wOTdhLTQzYTAtODNkNi05ZGUxY2FhMjRjZDgiXQ%3D%3D&page%5Bsize%5D=1
+      summary: List webhook logs
+      tags:
+      - Webhooks
+components:
+  schemas:
+    AccountTypeEnum:
+      description: |
+        Specifies the type of bank account. Currently returned values are `SAVER`
+        and `TRANSACTIONAL`.
+      enum:
+      - SAVER
+      - TRANSACTIONAL
+      type: string
+    MoneyObject:
+      description: |
+        Provides information about a value of money.
+      properties:
+        currencyCode:
+          description: |
+            The ISO 4217 currency code.
+          type: string
+        value:
+          description: |
+            The amount of money, formatted as a string in the relevant currency.
+            For example, for an Australian dollar value of $10.56, this field will
+            be `"10.56"`. The currency symbol is not included in the string.
+          type: string
+        valueInBaseUnits:
+          description: |
+            The amount of money in the smallest denomination for the currency, as a
+            64-bit integer.  For example, for an Australian dollar value of $10.56,
+            this field will be `1056`.
+          type: integer
+      required:
+      - currencyCode
+      - value
+      - valueInBaseUnits
+      type: object
+    AccountResource:
+      description: |
+        Provides information about an Up bank account.
+      example:
+        relationships:
+          transactions:
+            links:
+              related: related
+        attributes:
+          createdAt: 2000-01-23T04:56:07.000+00:00
+          balance: ""
+          displayName: displayName
+          accountType: ""
+        links:
+          self: self
+        id: id
+        type: type
+      properties:
+        id:
+          description: |
+            The unique identifier for this account.
+          type: string
+        type:
+          description: 'The type of this resource: `accounts`'
+          type: string
+        attributes:
+          $ref: '#/components/schemas/AccountResource_attributes'
+        links:
+          $ref: '#/components/schemas/AccountResource_links'
+        relationships:
+          $ref: '#/components/schemas/AccountResource_relationships'
+      required:
+      - attributes
+      - id
+      - relationships
+      - type
+      type: object
+    ListAccountsResponse:
+      description: |
+        Successful response to get all accounts. This returns a paginated list of
+        accounts, which can be scrolled by following the `prev` and `next` links
+        if present.
+      example:
+        data:
+        - relationships:
+            transactions:
+              links:
+                related: related
+          attributes:
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            balance: ""
+            displayName: displayName
+            accountType: ""
+          links:
+            self: self
+          id: id
+          type: type
+        - relationships:
+            transactions:
+              links:
+                related: related
+          attributes:
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            balance: ""
+            displayName: displayName
+            accountType: ""
+          links:
+            self: self
+          id: id
+          type: type
+        links:
+          next: next
+          prev: prev
+      properties:
+        data:
+          description: |
+            The list of accounts returned in this response.
+          items:
+            $ref: '#/components/schemas/AccountResource'
+          type: array
+        links:
+          $ref: '#/components/schemas/ListAccountsResponse_links'
+      required:
+      - data
+      - links
+      type: object
+    GetAccountResponse:
+      description: |
+        Successful response to get a single account.
+      example:
+        data: ""
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/AccountResource'
+          description: |
+            The account returned in this response.
+      required:
+      - data
+      type: object
+    PingResponse:
+      description: |
+        Basic ping response to verify authentication.
+      example:
+        meta:
+          id: id
+          statusEmoji: statusEmoji
+      properties:
+        meta:
+          $ref: '#/components/schemas/PingResponse_meta'
+      required:
+      - meta
+      type: object
+    ErrorObject:
+      description: |
+        Provides information about an error processing a request.
+      properties:
+        status:
+          description: |
+            The HTTP status code associated with this error. This can also be
+            obtained from the response headers. The status indicates the broad type
+            of error according to HTTP semantics.
+          type: string
+        title:
+          description: |
+            A short description of this error. This should be stable across
+            multiple occurrences of this type of error and typically expands on the
+            reason for the status code.
+          type: string
+        detail:
+          description: |
+            A detailed description of this error. This should be considered unique
+            to individual occurrences of an error and subject to change. It is
+            useful for debugging purposes.
+          type: string
+        source:
+          $ref: '#/components/schemas/ErrorObject_source'
+      required:
+      - detail
+      - status
+      - title
+      type: object
+    ErrorResponse:
+      description: |
+        Generic error response that returns one or more errors.
+      properties:
+        errors:
+          description: |
+            The list of errors returned in this response.
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+          type: array
+      required:
+      - errors
+      type: object
+    TransactionStatusEnum:
+      description: |
+        Specifies which stage of processing a transaction is currently at.
+        Currently returned values are `HELD` and `SETTLED`. When a transaction is
+        held, its account’s `availableBalance` is affected. When a transaction is
+        settled, its account’s `currentBalance` is affected.
+      enum:
+      - HELD
+      - SETTLED
+      type: string
+    HoldInfoObject:
+      description: |
+        Provides information about the amount at which a transaction was in the
+        `HELD` status.
+      properties:
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The amount of this transaction while in the `HELD` status, in
+            Australian dollars.
+        foreignAmount:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The foreign currency amount of this transaction while in the `HELD`
+            status. This field will be `null` for domestic transactions. The amount
+            was converted to the AUD amount reflected in the `amount` field.
+          nullable: true
+      required:
+      - amount
+      - foreignAmount
+      type: object
+    RoundUpObject:
+      description: |
+        Provides information about how a Round Up was applied, such as whether or
+        not a boost was included in the Round Up.
+      properties:
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The total amount of this Round Up, represented as negative value.
+        boostPortion:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The portion of the Round Up `amount` owing to boosted Round Ups,
+            represented as a negative value. If no boost was added to the Round Up
+            this field will be `null`.
+          nullable: true
+      required:
+      - amount
+      - boostPortion
+      type: object
+    CashbackObject:
+      description: |
+        Provides information about an instant reimbursement in the form of
+        cashback.
+      properties:
+        description:
+          description: |
+            A brief description of why this cashback was paid.
+          type: string
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The total amount of cashback paid, represented as a positive value.
+      required:
+      - amount
+      - description
+      type: object
+    TransactionResource:
+      example:
+        relationships:
+          account:
+            data:
+              id: id
+              type: type
+            links:
+              related: related
+        attributes:
+          holdInfo: ""
+          createdAt: 2000-01-23T04:56:07.000+00:00
+          amount: ""
+          rawText: rawText
+          settledAt: 2000-01-23T04:56:07.000+00:00
+          description: description
+          message: message
+          roundUp: ""
+          status: ""
+          cashback: ""
+          foreignAmount: ""
+        links:
+          self: self
+        id: id
+        type: type
+      properties:
+        id:
+          description: |
+            The unique identifier for this transaction.
+          type: string
+        type:
+          description: 'The type of this resource: `transactions`'
+          type: string
+        attributes:
+          $ref: '#/components/schemas/TransactionResource_attributes'
+        links:
+          $ref: '#/components/schemas/AccountResource_links'
+        relationships:
+          $ref: '#/components/schemas/TransactionResource_relationships'
+      required:
+      - attributes
+      - id
+      - relationships
+      - type
+      type: object
+    ListTransactionsResponse:
+      example:
+        data:
+        - relationships:
+            account:
+              data:
+                id: id
+                type: type
+              links:
+                related: related
+          attributes:
+            holdInfo: ""
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            amount: ""
+            rawText: rawText
+            settledAt: 2000-01-23T04:56:07.000+00:00
+            description: description
+            message: message
+            roundUp: ""
+            status: ""
+            cashback: ""
+            foreignAmount: ""
+          links:
+            self: self
+          id: id
+          type: type
+        - relationships:
+            account:
+              data:
+                id: id
+                type: type
+              links:
+                related: related
+          attributes:
+            holdInfo: ""
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            amount: ""
+            rawText: rawText
+            settledAt: 2000-01-23T04:56:07.000+00:00
+            description: description
+            message: message
+            roundUp: ""
+            status: ""
+            cashback: ""
+            foreignAmount: ""
+          links:
+            self: self
+          id: id
+          type: type
+        links:
+          next: next
+          prev: prev
+      properties:
+        data:
+          description: |
+            The list of transactions returned in this response.
+          items:
+            $ref: '#/components/schemas/TransactionResource'
+          type: array
+        links:
+          $ref: '#/components/schemas/ListAccountsResponse_links'
+      required:
+      - data
+      - links
+      type: object
+    GetTransactionResponse:
+      description: |
+        Successful response to get a single transaction.
+      example:
+        data: ""
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/TransactionResource'
+          description: |
+            The transaction returned in this response.
+      required:
+      - data
+      type: object
+    WebhookResource:
+      description: |
+        Provides information about a webhook.
+      example:
+        relationships:
+          logs:
+            links:
+              related: related
+        attributes:
+          createdAt: 2000-01-23T04:56:07.000+00:00
+          secretKey: secretKey
+          description: description
+          url: url
+        links:
+          self: self
+        id: id
+        type: type
+      properties:
+        id:
+          description: |
+            The unique identifier for this webhook.
+          type: string
+        type:
+          description: 'The type of this resource: `webhooks`'
+          type: string
+        attributes:
+          $ref: '#/components/schemas/WebhookResource_attributes'
+        links:
+          $ref: '#/components/schemas/AccountResource_links'
+        relationships:
+          $ref: '#/components/schemas/WebhookResource_relationships'
+      required:
+      - attributes
+      - id
+      - relationships
+      - type
+      type: object
+    ListWebhooksResponse:
+      description: |
+        Successful response to get all webhooks. This returns a paginated list of
+        webhooks, which can be scrolled by following the `prev` and `next` links
+        if present.
+      example:
+        data:
+        - relationships:
+            logs:
+              links:
+                related: related
+          attributes:
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            secretKey: secretKey
+            description: description
+            url: url
+          links:
+            self: self
+          id: id
+          type: type
+        - relationships:
+            logs:
+              links:
+                related: related
+          attributes:
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            secretKey: secretKey
+            description: description
+            url: url
+          links:
+            self: self
+          id: id
+          type: type
+        links:
+          next: next
+          prev: prev
+      properties:
+        data:
+          description: |
+            The list of webhooks returned in this response.
+          items:
+            $ref: '#/components/schemas/WebhookResource'
+          type: array
+        links:
+          $ref: '#/components/schemas/ListAccountsResponse_links'
+      required:
+      - data
+      - links
+      type: object
+    WebhookInputResource:
+      description: |
+        Represents a webhook specified as request input.
+      properties:
+        attributes:
+          $ref: '#/components/schemas/WebhookInputResource_attributes'
+      required:
+      - attributes
+      type: object
+    CreateWebhookRequest:
+      description: |
+        Request to create a new webhook. This currently only requires a `url`
+        attribute.
+      example:
+        data: ""
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/WebhookInputResource'
+          description: |
+            The webhook resource to create.
+      required:
+      - data
+      type: object
+    CreateWebhookResponse:
+      description: |
+        Successful response after creating a webhook.
+      example:
+        data: ""
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/WebhookResource'
+          description: |
+            The webhook that was created.
+      required:
+      - data
+      type: object
+    WebhookEventTypeEnum:
+      description: |
+        Specifies the type of a webhook event. This can be used to determine what
+        action to take in response to the event, such as which relationships to
+        expect.
+      enum:
+      - TRANSACTION_CREATED
+      - TRANSACTION_SETTLED
+      - TRANSACTION_DELETED
+      - PING
+      type: string
+    WebhookEventResource:
+      description: |
+        Provides the event data used in asynchronous webhook event callbacks to
+        subscribed endpoints. Webhooks events have defined `eventType`s and may
+        optionally relate to other resources within the Up API.
+      properties:
+        id:
+          description: |
+            The unique identifier for this event. This will remain constant across
+            delivery retries.
+          type: string
+        type:
+          description: 'The type of this resource: `webhook-events`'
+          type: string
+        attributes:
+          $ref: '#/components/schemas/WebhookEventResource_attributes'
+        links:
+          $ref: '#/components/schemas/AccountResource_links'
+        relationships:
+          $ref: '#/components/schemas/WebhookEventResource_relationships'
+      required:
+      - attributes
+      - id
+      - relationships
+      - type
+      type: object
+    WebhookEventCallback:
+      description: |
+        Asynchronous callback request used for webhook event delivery.
+      example:
+        data: ""
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/WebhookEventResource'
+          description: |
+            The webhook event data sent to the subscribed webhook.
+      required:
+      - data
+      type: object
+    GetWebhookResponse:
+      description: |
+        Successful response to get a single webhook.
+      example:
+        data: ""
+      properties:
+        data:
+          allOf:
+          - $ref: '#/components/schemas/WebhookResource'
+          description: |
+            The webhook returned in this response.
+      required:
+      - data
+      type: object
+    WebhookDeliveryStatusEnum:
+      description: |
+        Specifies the nature of the success or failure of a webhook delivery
+        attempt to the subscribed webhook URL. The currently returned values are
+        described below:
+
+        - **`DELIVERED`**: The event was delivered to the webhook URL
+          successfully and a `200` response was received.
+        - **`UNDELIVERABLE`**: The webhook URL was not reachable, or timed out.
+        - **`BAD_RESPONSE_CODE`**: The event was delivered to the webhook URL
+          but a non-`200` response was received.
+      enum:
+      - DELIVERED
+      - UNDELIVERABLE
+      - BAD_RESPONSE_CODE
+      type: string
+    WebhookDeliveryLogResource:
+      description: |
+        Provides historical webhook event delivery information for analysis and
+        debugging purposes.
+      example:
+        relationships:
+          webhookEvent:
+            data:
+              id: id
+              type: type
+        attributes:
+          request:
+            body: body
+          createdAt: 2000-01-23T04:56:07.000+00:00
+          response:
+            body: body
+            statusCode: 0
+          deliveryStatus: ""
+        links:
+          self: self
+        id: id
+        type: type
+      properties:
+        id:
+          description: |
+            The unique identifier for this log entry.
+          type: string
+        type:
+          description: 'The type of this resource: `webhook-delivery-logs`'
+          type: string
+        attributes:
+          $ref: '#/components/schemas/WebhookDeliveryLogResource_attributes'
+        links:
+          $ref: '#/components/schemas/AccountResource_links'
+        relationships:
+          $ref: '#/components/schemas/WebhookDeliveryLogResource_relationships'
+      required:
+      - attributes
+      - id
+      - relationships
+      - type
+      type: object
+    ListWebhookDeliveryLogsResponse:
+      description: |
+        Successful response to get all delivery logs for a webhook. This returns
+        a [paginated](#pagination) list of delivery logs, which can be scrolled
+        by following the `next` and `prev` links if present.
+      example:
+        data:
+        - relationships:
+            webhookEvent:
+              data:
+                id: id
+                type: type
+          attributes:
+            request:
+              body: body
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            response:
+              body: body
+              statusCode: 0
+            deliveryStatus: ""
+          links:
+            self: self
+          id: id
+          type: type
+        - relationships:
+            webhookEvent:
+              data:
+                id: id
+                type: type
+          attributes:
+            request:
+              body: body
+            createdAt: 2000-01-23T04:56:07.000+00:00
+            response:
+              body: body
+              statusCode: 0
+            deliveryStatus: ""
+          links:
+            self: self
+          id: id
+          type: type
+        links:
+          next: next
+          prev: prev
+      properties:
+        data:
+          description: |
+            The list of delivery logs returned in this response.
+          items:
+            $ref: '#/components/schemas/WebhookDeliveryLogResource'
+          type: array
+        links:
+          $ref: '#/components/schemas/ListAccountsResponse_links'
+      required:
+      - data
+      - links
+      type: object
+    AccountResource_attributes:
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        balance: ""
+        displayName: displayName
+        accountType: ""
+      properties:
+        displayName:
+          description: |
+            The name associated with the account in the Up application.
+          type: string
+        accountType:
+          allOf:
+          - $ref: '#/components/schemas/AccountTypeEnum'
+          description: |
+            The bank account type of this account.
+        balance:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The available balance of the account, taking into account any amounts
+            that are currently on hold.
+        createdAt:
+          description: |
+            The date-time at which this account was first opened.
+          format: date-time
+          type: string
+      required:
+      - accountType
+      - balance
+      - createdAt
+      - displayName
+    AccountResource_links:
+      example:
+        self: self
+      properties:
+        self:
+          description: |
+            The canonical link to this resource.
+          type: string
+      required:
+      - self
+    AccountResource_relationships_transactions_links:
+      example:
+        related: related
+      properties:
+        related:
+          description: |
+            The link to get the related resource data for this relationship.
+          type: string
+      required:
+      - related
+    AccountResource_relationships_transactions:
+      example:
+        links:
+          related: related
+      properties:
+        links:
+          $ref: '#/components/schemas/AccountResource_relationships_transactions_links'
+    AccountResource_relationships:
+      example:
+        transactions:
+          links:
+            related: related
+      properties:
+        transactions:
+          $ref: '#/components/schemas/AccountResource_relationships_transactions'
+      required:
+      - transactions
+    ListAccountsResponse_links:
+      example:
+        next: next
+        prev: prev
+      properties:
+        prev:
+          description: |
+            The link to the previous page in the results. If this value is `null`
+            there is no previous page.
+          nullable: true
+          type: string
+        next:
+          description: |
+            The link to the next page in the results. If this value is `null`
+            there is no next page.
+          nullable: true
+          type: string
+      required:
+      - next
+      - prev
+    PingResponse_meta:
+      example:
+        id: id
+        statusEmoji: statusEmoji
+      properties:
+        id:
+          description: |
+            The unique identifier of the authenticated customer.
+          type: string
+        statusEmoji:
+          description: |
+            A cute emoji that represents the response status.
+          type: string
+      required:
+      - id
+      - statusEmoji
+    ErrorObject_source:
+      description: |
+        If applicable, location in the request that this error relates to. This
+        may be a parameter in the query string, or a an attribute in the
+        request body.
+      properties:
+        parameter:
+          description: |
+            If this error relates to a query parameter, the name of the
+            parameter.
+          type: string
+        pointer:
+          description: |
+            If this error relates to an attribute in the request body, a
+            rfc-6901 JSON pointer to the attribute.
+          type: string
+    TransactionResource_attributes:
+      example:
+        holdInfo: ""
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        amount: ""
+        rawText: rawText
+        settledAt: 2000-01-23T04:56:07.000+00:00
+        description: description
+        message: message
+        roundUp: ""
+        status: ""
+        cashback: ""
+        foreignAmount: ""
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TransactionStatusEnum'
+          description: |
+            The current processing status of this transaction, according to
+            whether or not this transaction has settled or is still held.
+        rawText:
+          description: |
+            The original, unprocessed text of the transaction. This is often not
+            a perfect indicator of the actual merchant, but it is useful for
+            reconciliation purposes in some cases.
+          nullable: true
+          type: string
+        description:
+          description: |
+            A short description for this transaction. Usually the merchant name
+            for purchases.
+          type: string
+        message:
+          description: |
+            Attached message for this transaction, such as a payment message, or a
+            transfer note.
+          nullable: true
+          type: string
+        holdInfo:
+          allOf:
+          - $ref: '#/components/schemas/HoldInfoObject'
+          description: |
+            If this transaction is currently in the `HELD` status, or was ever in
+            the `HELD` status, the `amount` and `foreignAmount` of the
+            transaction while `HELD`.
+          nullable: true
+        roundUp:
+          allOf:
+          - $ref: '#/components/schemas/RoundUpObject'
+          description: |
+            Details of how this transaction was rounded-up. If no Round Up was
+            applied this field will be `null`.
+          nullable: true
+        cashback:
+          allOf:
+          - $ref: '#/components/schemas/CashbackObject'
+          description: |
+            If all or part of this transaction was instantly reimbursed in the
+            form of cashback, details of the reimbursement.
+          nullable: true
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The amount of this transaction in Australian dollars. For
+            transactions that were once `HELD` but are now `SETTLED`, refer to
+            the `holdInfo` field for the original `amount` the transaction was
+            `HELD` at.
+        foreignAmount:
+          allOf:
+          - $ref: '#/components/schemas/MoneyObject'
+          description: |
+            The foreign currency amount of this transaction. This field will be
+            `null` for domestic transactions. The amount was converted to the AUD
+            amount reflected in the `amount` of this transaction. Refer to the
+            `holdInfo` field for the original `foreignAmount` the transaction was
+            `HELD` at.
+          nullable: true
+        settledAt:
+          description: |
+            The date-time at which this transaction settled. This field will be
+            `null` for transactions that are currently in the `HELD` status.
+          format: date-time
+          nullable: true
+          type: string
+        createdAt:
+          description: |
+            The date-time at which this transaction was first encountered.
+          format: date-time
+          type: string
+      required:
+      - amount
+      - cashback
+      - createdAt
+      - description
+      - foreignAmount
+      - holdInfo
+      - message
+      - rawText
+      - roundUp
+      - settledAt
+      - status
+    TransactionResource_relationships_account_data:
+      example:
+        id: id
+        type: type
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+      required:
+      - id
+      - type
+    TransactionResource_relationships_account:
+      example:
+        data:
+          id: id
+          type: type
+        links:
+          related: related
+      properties:
+        links:
+          $ref: '#/components/schemas/AccountResource_relationships_transactions_links'
+        data:
+          $ref: '#/components/schemas/TransactionResource_relationships_account_data'
+      required:
+      - data
+    TransactionResource_relationships:
+      example:
+        account:
+          data:
+            id: id
+            type: type
+          links:
+            related: related
+      properties:
+        account:
+          $ref: '#/components/schemas/TransactionResource_relationships_account'
+      required:
+      - account
+    WebhookResource_attributes:
+      example:
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        secretKey: secretKey
+        description: description
+        url: url
+      properties:
+        url:
+          description: |
+            The URL that this webhook is configured to `POST` events to.
+          type: string
+        description:
+          description: |
+            An optional description that was provided at the time the webhook was
+            created.
+          nullable: true
+          type: string
+        secretKey:
+          description: |
+            A shared secret key used to sign all webhook events sent to the
+            configured webhook URL. This field is returned only once, upon the
+            initial creation of the webhook. If lost, create a new webhook and
+            delete this webhook.
+
+            The webhook URL receives a request with a
+            `X-Up-Authenticity-Signature` header, which is the SHA-256 HMAC of
+            the entire raw request body signed using this `secretKey`. It is
+            advised to compute and check this signature to verify the
+            authenticity of requests sent to the webhook URL. See
+            [Handling webhook events](#callback_post_webhookURL) for full
+            details.
+          type: string
+        createdAt:
+          description: |
+            The date-time at which this webhook was created.
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - description
+      - url
+    WebhookResource_relationships:
+      example:
+        logs:
+          links:
+            related: related
+      properties:
+        logs:
+          $ref: '#/components/schemas/AccountResource_relationships_transactions'
+      required:
+      - logs
+    WebhookInputResource_attributes:
+      properties:
+        url:
+          description: |
+            The URL that this webhook should post events to. This must be a valid
+            HTTP or HTTPS URL that does not exceed 300 characters in length.
+          format: uri
+          type: string
+        description:
+          description: |
+            An optional description for this webhook, up to 64 characters in
+            length.
+          nullable: true
+          type: string
+      required:
+      - url
+    WebhookEventResource_attributes:
+      properties:
+        eventType:
+          allOf:
+          - $ref: '#/components/schemas/WebhookEventTypeEnum'
+          description: |
+            The type of this event. This can be used to determine what action to
+            take in response to the event.
+        createdAt:
+          description: |
+            The date-time at which this event was generated.
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - eventType
+    WebhookEventResource_relationships:
+      properties:
+        webhook:
+          $ref: '#/components/schemas/TransactionResource_relationships_account'
+        transaction:
+          $ref: '#/components/schemas/TransactionResource_relationships_account'
+      required:
+      - webhook
+    WebhookDeliveryLogResource_attributes_request:
+      description: |
+        Information about the request that was sent to the webhook URL.
+      example:
+        body: body
+      properties:
+        body:
+          description: |
+            The payload that was sent in the request body.
+          type: string
+      required:
+      - body
+    WebhookDeliveryLogResource_attributes_response:
+      description: |
+        Information about the response that was received from the webhook URL.
+      example:
+        body: body
+        statusCode: 0
+      nullable: true
+      properties:
+        statusCode:
+          description: |
+            The HTTP status code received in the response.
+          type: integer
+        body:
+          description: |
+            The payload that was recieved in the response body.
+          type: string
+      required:
+      - body
+      - statusCode
+    WebhookDeliveryLogResource_attributes:
+      example:
+        request:
+          body: body
+        createdAt: 2000-01-23T04:56:07.000+00:00
+        response:
+          body: body
+          statusCode: 0
+        deliveryStatus: ""
+      properties:
+        request:
+          $ref: '#/components/schemas/WebhookDeliveryLogResource_attributes_request'
+        response:
+          $ref: '#/components/schemas/WebhookDeliveryLogResource_attributes_response'
+        deliveryStatus:
+          allOf:
+          - $ref: '#/components/schemas/WebhookDeliveryStatusEnum'
+          description: |
+            The success or failure status of this delivery attempt.
+        createdAt:
+          description: |
+            The date-time at which this log entry was created.
+          format: date-time
+          type: string
+      required:
+      - createdAt
+      - deliveryStatus
+      - request
+      - response
+    WebhookDeliveryLogResource_relationships_webhookEvent:
+      example:
+        data:
+          id: id
+          type: type
+      properties:
+        data:
+          $ref: '#/components/schemas/TransactionResource_relationships_account_data'
+      required:
+      - data
+    WebhookDeliveryLogResource_relationships:
+      example:
+        webhookEvent:
+          data:
+            id: id
+            type: type
+      properties:
+        webhookEvent:
+          $ref: '#/components/schemas/WebhookDeliveryLogResource_relationships_webhookEvent'
+      required:
+      - webhookEvent
+  securitySchemes:
+    bearer_auth:
+      scheme: bearer
+      type: http
