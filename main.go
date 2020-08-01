@@ -65,9 +65,7 @@ func main() {
 
 func (up *Up) listTransactions(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	accs, _, err := up.client.AccountsApi.AccountsGet(ctx, &upapi.AccountsGetOpts{
-		PageSize: optional.NewInt32(10),
-	})
+	accs, _, err := up.client.AccountsApi.AccountsGet(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "fetching accounts")
 	}
@@ -79,6 +77,7 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 		accountNameToId[acc.Attributes.DisplayName] = acc.Id
 	}
 
+  // TODO: Use fuzzyfind-go instead
 	selectedAccountName := ""
 	prompt := &survey.Select{
 		Message: "Choose an account:",
@@ -88,23 +87,21 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "selecting account")
 	}
 
+  // TODO: Stream pages in while searching
 	txns, _, err := up.client.TransactionsApi.AccountsAccountIdTransactionsGet(
 		ctx,
 		accountNameToId[selectedAccountName],
-		nil,
+		&upapi.AccountsAccountIdTransactionsGetOpts{
+      PageSize: optional.NewInt32(100),
+    },
 	)
 
-	// TODO: Stream transactions into fuzzyfinder
 	lineItems := []string{}
 	for _, tx := range txns.Data {
-		settled := "???"
-		if tx.Attributes.SettledAt != nil {
-			settled = date.FromTime(*tx.Attributes.SettledAt).String()
-		}
-
+    created := date.FromTime(tx.Attributes.CreatedAt).String()
 		lineItems = append(lineItems, fmt.Sprintf(
 			"%s %s %s",
-			settled,
+			created,
 			tx.Attributes.Description,
 			tx.Attributes.Amount.Value,
 		))
