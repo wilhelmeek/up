@@ -13,7 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/urfave/cli/v2"
-	"github.com/wilhelmeek/help/internal/upapi"
+	"github.com/wilhelmeek/up/internal/upapi"
 )
 
 type Up struct {

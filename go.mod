@@ -1,4 +1,4 @@
-module github.com/wilhelmeek/help
+module github.com/wilhelmeek/up
 
 go 1.14
 
