@@ -6,26 +6,53 @@ import (
 	"log"
 	"os"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/antihax/optional"
+	"github.com/ktr0731/go-fuzzyfinder"
+	"github.com/peterstace/date"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/urfave/cli/v2"
 	"github.com/wilhelmeek/help/internal/upapi"
 )
 
-func main() {
+type Up struct {
+	client *upapi.APIClient
+}
+
+func NewUp() *Up {
 	token := os.Getenv("UP_TOK")
 	if token == "" {
 		log.Fatal("Please make sure you've sourced a valid UP_TOK")
 	}
 
+	config := upapi.NewConfiguration()
+	config.AddDefaultHeader(
+		"Authorization",
+		fmt.Sprintf("Bearer %s", os.Getenv("UP_TOK")),
+	)
+	upClient := upapi.NewAPIClient(config)
+
+	return &Up{
+		client: upClient,
+	}
+}
+
+func main() {
+	up := NewUp()
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
-				Name:    "accounts",
-				Aliases: []string{"a"},
-				Usage:   "list accounts",
-				Action:  listAccounts,
+				Name:    "balances",
+				Aliases: []string{"b"},
+				Usage:   "List account balances",
+				Action:  up.listBalances,
+			},
+			{
+				Name:    "transactions",
+				Aliases: []string{"t"},
+				Usage:   "Search for transactions",
+				Action:  up.listTransactions,
 			},
 		},
 	}
@@ -34,26 +61,75 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 }
 
-func listAccounts(cliCtx *cli.Context) error {
-	config := upapi.NewConfiguration()
-	config.AddDefaultHeader(
-		"Authorization",
-		fmt.Sprintf("Bearer %s", os.Getenv("UP_TOK")),
-	)
+func (up *Up) listTransactions(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	up := upapi.NewAPIClient(config)
+	accs, _, err := up.client.AccountsApi.AccountsGet(ctx, &upapi.AccountsGetOpts{
+		PageSize: optional.NewInt32(10),
+	})
+	if err != nil {
+		return errors.Wrap(err, "fetching accounts")
+	}
 
-	accs, _, err := up.AccountsApi.AccountsGet(ctx, &upapi.AccountsGetOpts{
+	accountNames := []string{}
+	accountNameToId := make(map[string]string)
+	for _, acc := range accs.Data {
+		accountNames = append(accountNames, acc.Attributes.DisplayName)
+		accountNameToId[acc.Attributes.DisplayName] = acc.Id
+	}
+
+	selectedAccountName := ""
+	prompt := &survey.Select{
+		Message: "Choose an account:",
+		Options: accountNames,
+	}
+	if survey.AskOne(prompt, &selectedAccountName) != nil {
+		return errors.Wrap(err, "selecting account")
+	}
+
+	txns, _, err := up.client.TransactionsApi.AccountsAccountIdTransactionsGet(
+		ctx,
+		accountNameToId[selectedAccountName],
+		nil,
+	)
+
+	// TODO: Stream transactions into fuzzyfinder
+	lineItems := []string{}
+	for _, tx := range txns.Data {
+		settled := "???"
+		if tx.Attributes.SettledAt != nil {
+			settled = date.FromTime(*tx.Attributes.SettledAt).String()
+		}
+
+		lineItems = append(lineItems, fmt.Sprintf(
+			"%s %s %s",
+			settled,
+			tx.Attributes.Description,
+			tx.Attributes.Amount.Value,
+		))
+	}
+
+	_, err = fuzzyfinder.Find(
+		lineItems,
+		func(i int) string {
+			return lineItems[i]
+		},
+		fuzzyfinder.WithMode(fuzzyfinder.ModeSmart),
+	)
+
+	return errors.Wrap(err, "fuzzy finding")
+}
+
+func (up *Up) listBalances(cliCtx *cli.Context) error {
+	ctx := context.Background()
+	accs, _, err := up.client.AccountsApi.AccountsGet(ctx, &upapi.AccountsGetOpts{
 		PageSize: optional.NewInt32(10),
 	})
 
 	if err != nil {
 		return errors.Wrap(err, "fetching accounts")
 	} else {
-
 		total := decimal.NewFromInt(0)
 		type listItem struct {
 			name string
