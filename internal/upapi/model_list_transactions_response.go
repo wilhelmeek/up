@@ -10,7 +10,7 @@
 package upapi
 // ListTransactionsResponse struct for ListTransactionsResponse
 type ListTransactionsResponse struct {
-	// The list of transactions returned in this response. 
+	// The list of transactions returned in this response.
 	Data []TransactionResource `json:"data"`
 	Links ListAccountsResponseLinks `json:"links"`
 }

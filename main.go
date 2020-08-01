@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"text/tabwriter"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/antihax/optional"
@@ -41,8 +42,8 @@ func NewUp() *Up {
 func main() {
 	up := NewUp()
 	app := &cli.App{
-    Name: "Unofficial Up CLI",
-    Usage: "Some handy Up shortcuts",
+		Name:  "Unofficial Up CLI",
+		Usage: "Some handy Up shortcuts",
 		Commands: []*cli.Command{
 			{
 				Name:    "balances",
@@ -79,7 +80,7 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 		accountNameToId[acc.Attributes.DisplayName] = acc.Id
 	}
 
-  // TODO: Use fuzzyfind-go instead
+	// TODO: Use fuzzyfind-go instead
 	selectedAccountName := ""
 	prompt := &survey.Select{
 		Message: "Choose an account:",
@@ -89,18 +90,18 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "selecting account")
 	}
 
-  // TODO: Stream pages in while searching
+	// TODO: Stream pages in while searching
 	txns, _, err := up.client.TransactionsApi.AccountsAccountIdTransactionsGet(
 		ctx,
 		accountNameToId[selectedAccountName],
 		&upapi.AccountsAccountIdTransactionsGetOpts{
-      PageSize: optional.NewInt32(100),
-    },
+			PageSize: optional.NewInt32(100),
+		},
 	)
 
 	lineItems := []string{}
 	for _, tx := range txns.Data {
-    created := date.FromTime(tx.Attributes.CreatedAt).String()
+		created := date.FromTime(tx.Attributes.CreatedAt).String()
 		lineItems = append(lineItems, fmt.Sprintf(
 			"%s %s %s",
 			created,
@@ -146,11 +147,13 @@ func (up *Up) listBalances(cliCtx *cli.Context) error {
 			}
 		}
 
+		writer := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight)
 		for _, li := range list {
-			fmt.Println(fmt.Sprintf("%s: $%s", li.name, li.val))
+			fmt.Fprintln(writer, fmt.Sprintf("%s:\t$%s", li.name, li.val))
 		}
-		fmt.Println()
-		fmt.Println(fmt.Sprintf("Total: $%s", total))
+		fmt.Fprintln(writer)
+		fmt.Fprintln(writer, fmt.Sprintf("Total:\t\t$%s", total))
+		writer.Flush()
 	}
 
 	return nil
