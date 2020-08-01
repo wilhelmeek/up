@@ -53,15 +53,26 @@ func listAccounts(cliCtx *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "fetching accounts")
 	} else {
+
 		total := decimal.NewFromInt(0)
+		type listItem struct {
+			name string
+			val  decimal.Decimal
+		}
+		var list []listItem
 		for _, acc := range accs.Data {
 			bal, err := decimal.NewFromString(acc.Attributes.Balance.Value)
 			if err != nil {
 				return errors.Wrap(err, "parsing balance")
 			}
+			if bal.GreaterThan(decimal.Zero) {
+				list = append(list, listItem{name: acc.Attributes.DisplayName, val: bal})
+				total = total.Add(bal)
+			}
+		}
 
-			fmt.Println(fmt.Sprintf("%s: $%s", acc.Attributes.DisplayName, bal))
-			total = total.Add(bal)
+		for _, li := range list {
+			fmt.Println(fmt.Sprintf("%s: $%s", li.name, li.val))
 		}
 		fmt.Println()
 		fmt.Println(fmt.Sprintf("Total: $%s", total))
