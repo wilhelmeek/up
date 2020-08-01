@@ -41,6 +41,8 @@ func NewUp() *Up {
 func main() {
 	up := NewUp()
 	app := &cli.App{
+    Name: "Unofficial Up CLI",
+    Usage: "Some handy Up shortcuts",
 		Commands: []*cli.Command{
 			{
 				Name:    "balances",
