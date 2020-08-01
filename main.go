@@ -7,7 +7,6 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/antihax/optional"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/peterstace/date"
@@ -73,27 +72,20 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "fetching accounts")
 	}
 
-	accountNames := []string{}
-	accountNameToId := make(map[string]string)
-	for _, acc := range accs.Data {
-		accountNames = append(accountNames, acc.Attributes.DisplayName)
-		accountNameToId[acc.Attributes.DisplayName] = acc.Id
-	}
+	ind, err := fuzzyfinder.Find(
+		accs.Data,
+		func(i int) string {
+			return accs.Data[i].Attributes.DisplayName
+		},
+		fuzzyfinder.WithMode(fuzzyfinder.ModeSmart),
+	)
 
-	// TODO: Use fuzzyfind-go instead
-	selectedAccountName := ""
-	prompt := &survey.Select{
-		Message: "Choose an account:",
-		Options: accountNames,
-	}
-	if survey.AskOne(prompt, &selectedAccountName) != nil {
-		return errors.Wrap(err, "selecting account")
-	}
+	selectedAccountId := accs.Data[ind].Id
 
 	// TODO: Stream pages in while searching
 	txns, _, err := up.client.TransactionsApi.AccountsAccountIdTransactionsGet(
 		ctx,
-		accountNameToId[selectedAccountName],
+		selectedAccountId,
 		&upapi.AccountsAccountIdTransactionsGetOpts{
 			PageSize: optional.NewInt32(100),
 		},
