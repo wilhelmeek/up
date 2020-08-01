@@ -10,7 +10,7 @@
 package upapi
 // AccountResource Provides information about an Up bank account. 
 type AccountResource struct {
-	// The unique identifier for this account. 
+	// The unique identifier for this account.
 	Id string `json:"id"`
 	// The type of this resource: `accounts`
 	Type string `json:"type"`
