@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/antihax/optional"
@@ -14,10 +15,12 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/urfave/cli/v2"
 	"github.com/wilhelmeek/up/internal/upapi"
+	"golang.org/x/text/currency"
 )
 
 type Up struct {
 	client *upapi.APIClient
+	writer *tabwriter.Writer
 }
 
 func NewUp() *Up {
@@ -35,6 +38,7 @@ func NewUp() *Up {
 
 	return &Up{
 		client: upClient,
+		writer: tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight),
 	}
 }
 
@@ -67,50 +71,105 @@ func main() {
 
 func (up *Up) listTransactions(cliCtx *cli.Context) error {
 	ctx := context.Background()
-	accs, _, err := up.client.AccountsApi.AccountsGet(ctx, nil)
+	accsResp, _, err := up.client.AccountsApi.AccountsGet(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "fetching accounts")
 	}
 
+	accs := accsResp.Data
 	ind, err := fuzzyfinder.Find(
-		accs.Data,
+		accs,
 		func(i int) string {
-			return accs.Data[i].Attributes.DisplayName
+			return accs[i].Attributes.DisplayName
 		},
 		fuzzyfinder.WithMode(fuzzyfinder.ModeSmart),
 	)
+	if err != nil {
+		return errors.Wrap(err, "selecting account")
+	}
 
-	selectedAccountId := accs.Data[ind].Id
+	selectedAccountId := accs[ind].Id
 
-	// TODO: Stream pages in while searching
-	txns, _, err := up.client.TransactionsApi.AccountsAccountIdTransactionsGet(
+	txnsResp, _, err := up.client.TransactionsApi.AccountsAccountIdTransactionsGet(
 		ctx,
 		selectedAccountId,
 		&upapi.AccountsAccountIdTransactionsGetOpts{
 			PageSize: optional.NewInt32(100),
 		},
 	)
+	txns := txnsResp.Data
 
-	lineItems := []string{}
-	for _, tx := range txns.Data {
-		created := date.FromTime(tx.Attributes.CreatedAt).String()
-		lineItems = append(lineItems, fmt.Sprintf(
-			"%s %s %s",
-			created,
-			tx.Attributes.Description,
-			tx.Attributes.Amount.Value,
-		))
+	if _, err := fuzzyfinder.Find(
+		txns,
+		func(i int) string {
+			if i == -1 {
+				return ""
+			}
+
+			tx := txns[i]
+			created := date.FromTime(tx.Attributes.CreatedAt).String()
+			return fmt.Sprintf(
+				"%s %s %s",
+				created,
+				tx.Attributes.Description,
+				mustMoneyToString(tx.Attributes.Amount),
+			)
+		},
+		fuzzyfinder.WithPreviewWindow(
+			func(i, w, h int) string {
+				if i == -1 {
+					return ""
+				}
+
+				tx := txns[i]
+				amount := mustMoneyToString(tx.Attributes.Amount)
+        direction := "IN"
+        if tx.Attributes.Amount.ValueInBaseUnits < 0 {
+          direction = "OUT"
+        }
+
+				roundUp := "No Round-Up Occurred"
+				if tx.Attributes.RoundUp != nil {
+					roundUp = mustMoneyToString(tx.Attributes.RoundUp.Amount)
+				}
+
+				return fmt.Sprintf(
+					"%s\n\n🔄 %s\n💵 %s\n👆 %s\n%s %s",
+					tx.Attributes.Description,
+          direction,
+					amount,
+					roundUp,
+					statusToEmoji(tx.Attributes.Status),
+					tx.Attributes.Status,
+				)
+			},
+		),
+	); err != nil {
+		return errors.Wrap(err, "selecting transaction")
 	}
 
-	_, err = fuzzyfinder.Find(
-		lineItems,
-		func(i int) string {
-			return lineItems[i]
-		},
-		fuzzyfinder.WithMode(fuzzyfinder.ModeSmart),
-	)
+	return nil
+}
 
-	return errors.Wrap(err, "fuzzy finding")
+func statusToEmoji(s upapi.TransactionStatusEnum) string {
+	switch s {
+	case upapi.SETTLED:
+		return "✅"
+	case upapi.HELD:
+	default:
+		return "❓"
+	}
+	return "⁉️"
+}
+
+func mustMoneyToString(m upapi.MoneyObject) string {
+	unit := currency.MustParseISO(m.CurrencyCode)
+	amountFlt, err := strconv.ParseFloat(m.Value, 64)
+	if err != nil {
+		log.Fatalf("error parsing money value %s", m.Value)
+	}
+
+	return fmt.Sprintf("%s", currency.Symbol(unit.Amount(amountFlt)))
 }
 
 func (up *Up) listBalances(cliCtx *cli.Context) error {
@@ -139,13 +198,12 @@ func (up *Up) listBalances(cliCtx *cli.Context) error {
 			}
 		}
 
-		writer := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight)
 		for _, li := range list {
-			fmt.Fprintln(writer, fmt.Sprintf("%s:\t$%s", li.name, li.val))
+			fmt.Fprintln(up.writer, fmt.Sprintf("%s:\t$%s", li.name, li.val))
 		}
-		fmt.Fprintln(writer)
-		fmt.Fprintln(writer, fmt.Sprintf("Total:\t\t$%s", total))
-		writer.Flush()
+		fmt.Fprintln(up.writer)
+		fmt.Fprintln(up.writer, fmt.Sprintf("Total:\t\t$%s", total))
+		up.writer.Flush()
 	}
 
 	return nil
