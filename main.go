@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"text/tabwriter"
@@ -26,7 +27,7 @@ type Up struct {
 func NewUp() *Up {
 	token := os.Getenv("UP_TOK")
 	if token == "" {
-		log.Fatal("Please make sure you've sourced a valid UP_TOK")
+		log.Fatal("Please make sure you've sourced UP_TOK")
 	}
 
 	config := upapi.NewConfiguration()
@@ -46,18 +47,25 @@ func main() {
 	up := NewUp()
 	app := &cli.App{
 		Name:  "Unofficial Up CLI",
-		Usage: "Some handy Up shortcuts",
+		Usage: "Some Handy Up Shortcuts",
 		Commands: []*cli.Command{
+			{
+				Name:    "status",
+				Aliases: []string{"s"},
+				Usage:   "Check API status",
+				Action:  up.listAPIStatus,
+			},
+
 			{
 				Name:    "balances",
 				Aliases: []string{"b"},
-				Usage:   "List account balances",
+				Usage:   "List Account Balances",
 				Action:  up.listBalances,
 			},
 			{
 				Name:    "transactions",
 				Aliases: []string{"t"},
-				Usage:   "Search for transactions",
+				Usage:   "Fuzzy Find Transactions",
 				Action:  up.listTransactions,
 			},
 		},
@@ -67,6 +75,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func (up *Up) listAPIStatus(cliCtx *cli.Context) error {
+	pingResp, httpResp, err := up.client.UtilityEndpointsApi.UtilPingGet(context.Background())
+	if err != nil {
+		if httpResp.StatusCode == http.StatusUnauthorized {
+			return fmt.Errorf("UP_TOK not authorized")
+		}
+
+		return errors.Wrap(err, "determining api status")
+	}
+
+	fmt.Println(fmt.Sprintf("%s", pingResp.Meta.StatusEmoji))
+	return nil
 }
 
 func (up *Up) listTransactions(cliCtx *cli.Context) error {
@@ -99,13 +121,12 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 	)
 	txns := txnsResp.Data
 
-	if _, err := fuzzyfinder.Find(
+	ind, err = fuzzyfinder.Find(
 		txns,
 		func(i int) string {
 			if i == -1 {
 				return ""
 			}
-
 			tx := txns[i]
 			created := date.FromTime(tx.Attributes.CreatedAt).String()
 			return fmt.Sprintf(
@@ -120,35 +141,40 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 				if i == -1 {
 					return ""
 				}
-
-				tx := txns[i]
-				amount := mustMoneyToString(tx.Attributes.Amount)
-				direction := "IN"
-				if tx.Attributes.Amount.ValueInBaseUnits < 0 {
-					direction = "OUT"
-				}
-
-				roundUp := "No Round-Up Occurred"
-				if tx.Attributes.RoundUp != nil {
-					roundUp = mustMoneyToString(tx.Attributes.RoundUp.Amount)
-				}
-
-				return fmt.Sprintf(
-					"%s\n\n🔄 %s\n💵 %s\n👆 %s\n%s %s",
-					tx.Attributes.Description,
-					direction,
-					amount,
-					roundUp,
-					statusToEmoji(tx.Attributes.Status),
-					tx.Attributes.Status,
-				)
+				return formatTXNAtIndex(i, txns)
 			},
 		),
-	); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "selecting transaction")
 	}
 
+	fmt.Print(formatTXNAtIndex(ind, txns))
 	return nil
+}
+
+func formatTXNAtIndex(i int, txns []upapi.TransactionResource) string {
+	tx := txns[i]
+	amount := mustMoneyToString(tx.Attributes.Amount)
+	direction := "IN"
+	if tx.Attributes.Amount.ValueInBaseUnits < 0 {
+		direction = "OUT"
+	}
+
+	roundUp := "No Round-Up Occurred"
+	if tx.Attributes.RoundUp != nil {
+		roundUp = mustMoneyToString(tx.Attributes.RoundUp.Amount)
+	}
+
+	return fmt.Sprintf(
+		"%s\n\n🔄 %s\n💵 %s\n👆 %s\n%s %s\n",
+		tx.Attributes.Description,
+		direction,
+		amount,
+		roundUp,
+		statusToEmoji(tx.Attributes.Status),
+		tx.Attributes.Status,
+	)
 }
 
 func statusToEmoji(s upapi.TransactionStatusEnum) string {
