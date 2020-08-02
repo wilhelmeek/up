@@ -152,14 +152,10 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 }
 
 func statusToEmoji(s upapi.TransactionStatusEnum) string {
-	switch s {
-	case upapi.SETTLED:
+	if s == upapi.SETTLED {
 		return "✅"
-	case upapi.HELD:
-	default:
-		return "❓"
 	}
-	return "⁉️"
+	return "❓"
 }
 
 func mustMoneyToString(m upapi.MoneyObject) string {
