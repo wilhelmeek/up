@@ -123,10 +123,10 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 
 				tx := txns[i]
 				amount := mustMoneyToString(tx.Attributes.Amount)
-        direction := "IN"
-        if tx.Attributes.Amount.ValueInBaseUnits < 0 {
-          direction = "OUT"
-        }
+				direction := "IN"
+				if tx.Attributes.Amount.ValueInBaseUnits < 0 {
+					direction = "OUT"
+				}
 
 				roundUp := "No Round-Up Occurred"
 				if tx.Attributes.RoundUp != nil {
@@ -136,7 +136,7 @@ func (up *Up) listTransactions(cliCtx *cli.Context) error {
 				return fmt.Sprintf(
 					"%s\n\n🔄 %s\n💵 %s\n👆 %s\n%s %s",
 					tx.Attributes.Description,
-          direction,
+					direction,
 					amount,
 					roundUp,
 					statusToEmoji(tx.Attributes.Status),
