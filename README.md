@@ -12,6 +12,4 @@ To run locally, you will need to have `UP_TOK` set in your environment. You can 
 
 ### List Available Commands
 
-```bash
-up
-```
+`up`
