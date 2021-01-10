@@ -24,16 +24,20 @@ type Up struct {
 	writer *tabwriter.Writer
 }
 
+const (
+	UP_TOKEN = "UP_TOKEN"
+)
+
 func NewUp() *Up {
-	token := os.Getenv("UP_TOK")
+	token := os.Getenv(UP_TOKEN)
 	if token == "" {
-		log.Fatal("Please make sure you've sourced UP_TOK")
+		log.Fatalf("Please make sure you've sourced %s", UP_TOKEN)
 	}
 
 	config := upapi.NewConfiguration()
 	config.AddDefaultHeader(
 		"Authorization",
-		fmt.Sprintf("Bearer %s", os.Getenv("UP_TOK")),
+		fmt.Sprintf("Bearer %s", os.Getenv(UP_TOKEN)),
 	)
 	upClient := upapi.NewAPIClient(config)
 
@@ -81,13 +85,13 @@ func (up *Up) listAPIStatus(cliCtx *cli.Context) error {
 	pingResp, httpResp, err := up.client.UtilityEndpointsApi.UtilPingGet(context.Background())
 	if err != nil {
 		if httpResp.StatusCode == http.StatusUnauthorized {
-			return fmt.Errorf("UP_TOK not authorized")
+			return fmt.Errorf("%s not authorized", UP_TOKEN)
 		}
 
 		return errors.Wrap(err, "determining api status")
 	}
 
-	fmt.Println(fmt.Sprintf("%s", pingResp.Meta.StatusEmoji))
+	fmt.Println(pingResp.Meta.StatusEmoji)
 	return nil
 }
 
