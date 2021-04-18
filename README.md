@@ -4,7 +4,7 @@ A _very unofficial_ CLI for Up Bank.
 
 ## Installing
 
-`go get github.com/wilhelmeek/up/cmd/up`
+`go install github.com/wilhelmeek/up/cmd/up@latest`
 
 ## Running
 
